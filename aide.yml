@@ -1,0 +1,30 @@
+---
+- hosts: all
+  become: yes
+  tasks:
+    - name: install aide
+      yum:
+        name: aide.x86_64
+        state: latest
+      when: "ansible_os_family == 'RedHat'"
+
+    - name: generate initial Database for AIDE
+      command: /sbin/aide --init
+      when: ansible_os_family == 'RedHat'
+
+    - name: check for the Database template
+      stat: 
+        path: /var/lib/aide/aide.db.new.gz
+        register: new_db_there
+
+    - name: start using the template database
+      command: mv /var/lib/aide/aide.db.new.gz /var/lib/aide/aide.db.gz
+      when: new_db_there.stat.exists
+
+    - name: Check the filesystem in every 3 hours (8 times a day)
+      cron:
+        name: aide_check
+        hour: "3"
+        minute: "0"
+        job: "/sbin/aide --check"
+...
